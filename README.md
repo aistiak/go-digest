@@ -143,6 +143,8 @@ m := 1 == 2 // false
 ```
 unassinged bool variable has default value as false 
 
+__*type conversion is not posssible for bool , so no bool -> int or int -> bool possible*__
+
 - __Numeric__ 
 *for go in every system int is treated differently , but it is farunteed that it would at least be 32 bit but based  on the system it could also be 64 bits or 128 bits* 
 
@@ -198,6 +200,10 @@ a << 3  // 64
 a >> 3  // 1 
 
 ```
+
+ 
+
+
 
 
 
