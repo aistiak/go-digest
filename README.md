@@ -625,3 +625,252 @@ append can take two or more arguments
 ```
 
 >NB. if slice append exceeds the base size of the slice go is going to pow 2 the size of the underlying array   2 -> 4 -> 16
+
+
+__ex-2__ *(concatinate two slices in go)*
+
+```
+a := []int{1,2,3}
+a = append(a,[3]int{4,5,6}) // ❌
+```
+above code will not work as we are trying to append two differenct types array and slice 
+
+to make this work we have to spread the array 
+```
+a = append(a,[3]int{4,5,6}...)
+```
+this becomes 
+```
+a = append(a,4,5,6)
+```
+
+
+__ex-3__ *(implement stack in go)*
+
+stack has push and pop functions . push will be done by append and pop can be done by shift operation 
+
+```
+// pop first 
+a := []int{1,2,3,4,5}
+b := a[1:]
+// pop last 
+b := a[:len(a)-1] 
+```
+
+__ex-4__ *(remove element from the middel of a slice)*
+
+lets assume we want to remove the third element from a slice 
+```
+ a := []int{1,2,3,4,5,6,7}
+ 
+ b := append(a[:2],a[:3]...)
+
+```
+
+we have to be careful as we are working with references as we will ses in the code below 
+
+```
+ a := []int{1,2,3,4,5}
+ fmt.Println(a) //  1 2 3 4 5 
+ b := append(a[:2],a[:3]...) 
+ fmt.Println(b) // 1 2 4 5 
+ fmt.Println(a) // 1 2 4 5 5 , 🤷‍♀️ unexpected behavior 
+```
+
+we have to be careful of not using the same reference in other places 
+
+
+# Other collection types
+
+## Maps 
+
+example 
+
+```
+    statePopulation ;= map[string]int{
+        "dhaka" : 2323423 ,
+        "pabna" : 2131237
+    }
+    fmt.Println(statePopulation)
+    // map[dhaka:2323423 pabna:2131237]
+```
+
+value for a map can be of any type but to be a key for a map the type has to be testable with euqality 
+
+for example string , array , numbers can be tested if they are equal 1 == 1 
+"arif" == "sarif" , but not slice and map 
+
+another way of creating map is make function 
+
+```
+ mp := make(map[string]int)
+ mp = map[string]int{
+     "arif" : 27
+ }
+```
+> NB . the return order of map keys is not gaurenteed 
+
+remove entry from a map
+```
+    delete(mp,"arif")
+```
+
+> default map key value is 0 . not existing key returns 0 
+> 
+> so if a map has value as 0 how can we know if the key exists and is 0 or the does not exist thuse the value 0 
+
+```
+    pop , ok = mp["jabed"] 
+    // ok -> false 
+    // pop -> 0 
+
+```
+if key existed ok would be true 
+
+> how do we know how many elements are there in map 
+```
+len(mp) // 1 
+```
+> NB. mpas are passed by reference 
+
+
+## Struct 
+
+another collection type 
+
+```
+    type Doctor struct {
+        number int 
+        actorName string 
+        companions []string 
+    }
+    
+    func main () {
+    
+        doc := Doctor {
+            number : 3
+            actorName : "istiak"
+            companions : []string {
+                "sarif",
+                "samad",
+                "jabed"
+            }
+        }
+    }
+```
+
+we could also write this as 
+```
+doc := {
+    3,
+    "istiak",
+    []string {
+       "sarif",
+       "samad",
+       "jabed"
+    }
+}
+```
+for this approch order has to be maintained 
+
+```
+doc.number // 3
+doc.actorName // "istiak"
+doc.companions[2] // "jabed"
+```
+
+### thing about struct naming convension 
+> struct name starting with capital letter will be exported but if the property names are not capitized they wont be visible outside the package 
+
+#### annonymu struct 
+
+```
+ aDoctor := struct {name string} {
+     name : "arif"
+ }
+ aDoctor.name // "arif"
+```
+used mostly in short lived use cases 
+
+> NB. structs are passed by value not reference 
+
+> to pass reference we can use address of operator (&)
+
+```
+    bDoctor = &aDoctor 
+```
+#### extra bits 
+go does not have traditional OOP for example it does not have inharitance but to implement inharitance we can use embaded struct
+
+```
+type Animal struct {
+    Name  string 
+    Origin string 
+}
+
+type Bird struct {
+    Speed float32
+    CanFly bool 
+}
+
+```
+Go does not support isA relation but supports hasA relation or embaded 
+
+```
+type Bird {
+    Animal // embaded 
+    Speed float32
+    CanFly bool
+}
+```
+we can say a bird  has animal like characteristics
+
+```
+    b := Bird()
+    b.name = "penguin"
+    b.Origin = "alaska"
+    b.Speed = 23.2
+    b.CanFly = false 
+```
+but if we use literal syntax 
+
+```
+    b := {
+        Animal { Name : "penguin" , Origin : "alaska" }
+        Speed : 23.2
+        CanFly : false 
+    }
+```
+
+#### Tags 
+> tags just pass a string with property as metadata nothing else 
+
+```
+    type Animal {
+        Name string `required max:100`
+        Origin string 
+    }
+```
+tags are written in the right side of the property with backticks 
+
+to retrive tags 
+
+```
+    import "reflect"
+    
+    t := reflect.TypeOf(Animal{})
+    filed , _ = t.FieldByName("Name")
+    field.Tag // -> 'required max:100'
+```
+
+
+## So now if we list all the collection types in go they are 
+1. Array 
+2. Slice 
+3. map
+4. Struct
+
+
+
+
+# Control Flow 
