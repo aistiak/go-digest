@@ -874,3 +874,286 @@ to retrive tags
 
 
 # Control Flow 
+
+basic example 
+
+```
+    if true {
+        fmt.Println("this is true ")
+    }
+```
+in got we will alwasy have to use brances 
+
+```
+    if initializer ; condition {
+        // stuff 
+    }
+```
+
+```
+    population := map[string]int{
+        "mirpur" : 10000 ,
+        "baridhara" : 232000,
+    }
+    
+    if data , ok = population["mirpur"] ; ok {
+        fmt.Println(date) // initializer statement variables are scoped to this block 
+    }
+```
+
+> logical operator are same as other languages 
+
+> NB. floating point evaluation has to be do
+
+
+## switch statement 
+
+```
+func main() {
+    
+    var tag int = 1 
+    switch tag {
+        case 1 :
+            // do stff 
+        case 2 :
+            // do stuff 
+        default : 
+            // do stuff 
+    }
+}
+```
+falling through , 
+
+in other languages we do 
+
+```
+    case 1 :
+    case 2 :
+    case 3 :
+        // do stuff 
+
+```
+
+but in go there is no falling through instead we have the ability to test multiple test in a single case 
+```
+    case 1 , 5 :
+        // do stuff 
+    case 2 , 4, 6 :
+        // do stuff 
+```
+
+if some number is repeted in more then one case it is going to cause an error so the numbers have to be unique 
+
+> NB. in to break statemetns are implicit , as break tends to cause errors when we forget to write it so go designers made it implicit 
+
+
+__fallthrough in go__ if we put fallthrough keyword after any case the next code is going to execute 
+
+```    
+    i := 2
+    switch i {
+        case i < 10 :
+            // code 
+            fallthrough
+        case i == 1 : 
+            // code 
+    }
+```
+> hear event if i is 2 the code is i == 1 is going to execute beacuse of fallthrough 
+
+### typed switch 
+
+```
+    var i interface {} = 1 
+    switch i.(type) {
+        case int :    
+            // i is an int 
+        case float64 :
+            // i is float64 
+        case string : 
+            // i is a string 
+        default : 
+            // i is another type 
+    }
+
+```
+
+> NB. i.(type) returns the type of a variable  , but only inside switch case controll flow not outside switch 
+
+how do we catch [3]ubt{1,2,3} with typed switch in golang 
+
+```
+    switch i {
+        case [3]int : 
+            // code 
+    }
+
+```
+
+> we can break statement explicitly to break out of a switch statement if we want 
+
+
+
+# Looping 
+
+a simple loop 
+```
+    func main () {
+        for i := 0 ; i < 5 ; i++ {
+            fmt.Println(i)
+        } 
+    }
+```
+
+writing like below will cause error 
+```
+    for i := 0 , j := 0 ; i < 5 ; i+=1 , j +=1 { // ❌
+        // code 
+    }
+```
+instead we have to write it like 
+
+```
+    for i , j := 0 , 0 ; i < 5 ; i , j = i+1 , j+1 {
+        // code 
+    }
+```
+in the above code increment section if we write i++ and j++ , it would cause error as i++  is not an expression in go it is an statement 
+> NB. expression is something that resolves to a value (returns a value )
+
+while loop substitution with for in go , with only the condition section 
+
+```
+    for i < 5 {
+        // code 
+    }
+
+```
+
+this is also valid 
+```
+    for {
+        // infinity loop 
+    }
+```
+> NB. break and continue are same as other languages (like c )
+
+## label in loop 
+there is a concept in golang called label , this can be used to break out of loops 
+
+```
+    loop :
+        for {
+            for {
+                break loop 
+            }
+        }
+```
+
+this might seem like c langs goto statement but its not . loop hear indicates from where do we want to break out of. 
+
+### looping through other types of collections 
+
+```
+    s := []int{10,20,30}
+    
+    for k,v := range s {
+        fmt.Println(k,v)
+    }
+    
+    // 0 1
+    // 1 2 
+    // 2 3
+    
+```
+
+we can use this format with 
+
+1. slice 
+2. array 
+3. map
+4. string 
+5. channel (discussed latter in concurrent programming section) 
+
+```
+    for k,v := range x {
+        // code 
+    }
+```
+
+only loop through keys 
+```
+    for k := range x {
+        // code 
+    }
+```
+or 
+```    
+    for k , _ := range x {
+        // code 
+    }
+```
+only values 
+```
+    for _ , v := range x {
+        // code 
+    }
+```
+
+> _ is a special variable in go which is called the readonly variable and go compiler ignores it 
+
+
+
+
+# Defer , Panic , Recover 
+
+> __DEFER__ function invokes a function but delays it execution to some future point in time 
+
+
+> __PANIC__ an application can panic , go application can enter a state when it can no longer continue to run and now go runtime trigger that or trigger it on our own 
+
+
+> __RECOVER__ when application starts to panic we need to somehow save the application and signal that to the rest of the application 
+
+```
+    func main () {
+        
+        fmt.Println("start")
+        
+        defer fmt.Println("mid")
+        
+        fmt.Println("end")
+        
+    }
+    // output
+    // start 
+    // end 
+    // mid 
+```
+the way defer works hear it it delays the execution of the statement it moves it after the main function but before the main function returns
+
+
+```
+    func main () {
+        
+        defer fmt.Println("start")
+        
+        defer fmt.Println("mid")
+        
+        defer fmt.Println("end")
+    }
+    // output
+    // end 
+    // mid
+    // start 
+    
+```
+
+defer works LIFO (last in first out) 
+
+so the last function that gets deffered will be the first to get called 
+
+__use cases__ we often use defer keyword to close out resource and it it logical that we close resources out in the opposit order we open them , as resource might be dependent on the other one 
+
+>NB. defere statement executes after the main function is done but before the main function returns 
+
