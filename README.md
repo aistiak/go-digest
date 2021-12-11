@@ -1157,3 +1157,640 @@ __use cases__ we often use defer keyword to close out resource and it it logical
 
 >NB. defere statement executes after the main function is done but before the main function returns 
 
+### practical use of differ function 
+this example is a sample rpogramm that requests a file from netwok and reads the contents of the file 
+
+```
+import (
+    'fmt',
+    'io/util'
+    'log'
+    'net/http'
+)
+
+func main() {
+    res , err = http.Get('https://google/robots.txt')
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    robots , err = ioutil.ReadAll(res.Body) 
+    
+    res.Body.Close()
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Println("%s",robots),
+}
+```
+
+
+in the above application defer can help with the body close .  As we can seee we closed the file lines later to the request but htere is a prossibility that we might forget to close it later . Hear defer can help us after the request we can close e witha deffered keyword 
+
+so code could be like below 
+
+```
+import (
+    'fmt',
+    'io/util'
+    'log'
+    'net/http'
+)
+
+func main() {
+    res , err = http.Get('https://google/robots.txt')
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer res.Body.Close()
+    robots , err = ioutil.ReadAll(res.Body) 
+    
+    
+    
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Println("%s",robots),
+}
+
+```
+> NB. the most common use case for using defer allows us to associate opening and closing of reses next to each other 
+
+### A common pattern 
+- Open resource 
+- check for error 
+- close the resource with differ 
+- we have to check for error beacuse if the resource never opens trying to close it will cause error 
+
+> NB. when we are opening a lot of resources say with a loop then using defer might not be the best choice as defer will execute before main returns so milions of resources will stay oen and close all togather at the end . we might explicitly close then after are done delegate resource handelling to another function and let it handel the closing of it 
+
+
+```
+    func main () {
+        
+         a := "start"
+         defer fmt.Println(a)
+         a = "end"
+    }
+    // output 
+    // "start"
+```
+> defer takes the value of a variable at the time defer was called 
+
+
+# Panic 
+
+In go there are no `Exception` . like most languages what is said to be exceptional like most it go it is quite normal . 
+
+lets sat we are trying to open a file that does not exist many languages will consider it as an exception but go will simply return an error value 
+
+however there are cases where a Go application can not continue which in go is called `panic` 
+
+__Ex__
+
+```
+    func main () {
+        a,b := 1,0
+        and := a/b
+        fmt.Println(ans)
+    }
+    // output 
+    // panic : runtime error : integer devided by zero 
+    // {stack trace}
+```
+
+
+__ex__ 
+
+```
+    fmt.Println("start")
+    panic(" something bad happned")
+    fmt.Println("end")
+    
+    // out
+    // panic : something bad happned 
+    // {stack trace }
+```
+
+
+
+>NB.it is very rare that go is going to panic . it would in most cases return a error value its up to use how we handel it 
+
+>NB.Panics happen after the deffered function are executed 
+
+__ex__ 
+
+```
+fmt.Println("start")
+defer fmt.Println(" this was deffered ")
+panic("something bad")
+fmt.Println(" end ")
+// output 
+// start 
+// this was deffered 
+// panic : something bad 
+// {stack trace}
+
+```
+
+`recover function returns nil if application is not panicing else will return error that causes the application to panic `
+
+```
+fmt.Println("start")
+defer func () {
+
+    if err :=recover() ; err != nil {
+        log.Println(err)
+    }
+}
+panic("something bad") 
+fmt.Println("end") 
+
+
+// output 
+// start 
+// log-time : something baf 
+```
+
+hear we see recover catches the error but our programm still exists . But recover still has impact if we have depper call stack which we will see in the next example 
+
+__ex__ 
+
+```
+func () { 
+  fmt.Println( " start " ) 
+  panicker()
+  fmt.Println("end") // <- will execute 
+} 
+
+
+func panicker () {
+   fmt.Println(" about to panic " ) 
+   defer func () {
+     if err := recover() ; err != nil {
+       log.Println(err)
+     }
+   }
+   
+   panic(" something bad")
+   fmt.Println(" donr panicing " ) // will not execute 
+}
+
+
+// output 
+// start 
+// about to panic 
+// error 
+// end
+```
+
+when the panic occurs in the panicker function . the usual execution will stop and execute the derrered function the deffered function recovers the application and the normal excution flow starts again
+
+
+calling recover means that we are going to deal with what ever is wrong with but in case we cant we can re panic the application 
+
+so if we change the code a bit 
+
+``` 
+if err := recover() ; err != nil {
+   log.Println(err)
+   panic(err) 
+}
+
+// start 
+// about to panic 
+// error : something  bad 
+// panic : something bad 
+// { stack trace } 
+```
+
+# Pointer 
+
+agenda 
+- creating pointer 
+- dereferencing pointer 
+- the new function 
+- working with nil 
+- types with internal pointer 
+
+__ex__ 
+
+``` 
+ var a int = 42 
+ var b *int  = &a 
+ fmt.Println(a,b)
+ // 42 , 0x0040 
+ fmt.Println(a,*b)
+ // 42 , 42 
+ a = 27 
+ fmt.Println( a, b ) 
+ // 27 , 27 
+ *b = 10
+ fmt.println(a,b)
+ // 10 10
+
+```
+
+__ex__*(pointer arithmetic)*
+
+```
+a := [3]int{1,2,3}
+b := &a[0] // ❌
+c := &a[1] // ❌
+```
+go does not support pointer arithmetic built in. if we must use it we have to use the `unsafe` package 
+
+P.A was left out of go for simplicity as P.A can get very complicated 
+
+__ex__ *(how can we create pointer types )* 
+
+```
+type mySteuct struct {
+  foo int 
+}
+func main () {
+
+  var ms *myStruct // ms := &myStruct{foo:42}
+  fmt.Println(ms) 
+  
+}
+
+// output 
+// &{42} 
+
+```
+
+another way to initialize variable to be pointed to an object is 
+
+```
+var ms *myStruct 
+ms = new (myStruct)
+fmt.Println(ms)
+// output 
+// &{0} 
+```
+> NB.with new we can only create empty objects
+
+```
+var ms *myStruct 
+fmt.Println(ms)
+// outout 
+// <nil>
+```
+
+dereferencing with pointer 
+
+```
+var ms *myStruct
+ms = new(myStruct)
+(*ms).foo = 42 
+fmt.Println((*ms).foo)
+// output 
+// 42
+```
+>the perenthesis are hear because dereferencing operation ( * ) has lower precidence then the dot (.) operator 
+
+>without the perenthesis we would be dereferencing 
+>(ms.foo ) the whole thing 
+
+the above code can also be written as 
+
+```
+var ms *myStruct
+ms = new (myStruct)
+ms.foo = 42 
+fmt.Println(ms.foo)
+// output 
+// 42 
+```
+
+as go had limits of pointer it can help us out by making syntax easy , this is just syntactic sugar the compiler is helping us out  (*ms).foo and ms.foo are same to the compiler hear
+
+__ex__*(why are slice / map copied by reference when assigned to another variable)*
+
+>beacuse they are a pointer reference to an underlying array 
+
+```
+    a := []int{1,2,3}
+    b := a // <- passing pointer reference 
+    fmt.Printn(a,b)
+    a[1] = 42 
+```
+>same thing with maps 
+
+__ex__*(how to declare pointer of a type)*
+
+>prefix the type with an asterics of the variable 
+
+```
+var a *int 
+```
+
+# Functions 
+
+agenda 
+- basic syntax 
+- parameter 
+-  return values 
+- anoynymus function 
+- function as type (first class citizen) 
+- method (special king of function)
+
+__ex__
+> function starts with func if function name is upper case it will be exported 
+
+```
+func main () {
+    // stuff 
+}
+```
+
+### parameters 
+
+```
+func sayMessage(msg string) {
+    fmt.Println(msg)
+}
+
+func main() {
+    sayMessage("hello there")
+}
+```
+
+if multiple parameters are of the same type we can specity the parameter at once 
+
+```
+func test (geet,name string) {
+
+}
+```
+
+we can pass parameters as pointer in a function for small values it might not matter much but for large data structures passing by pointer is efficient as the value need to be copied every single time 
+
+But passing maps and slices to a function is always as a pointer 
+
+
+### variable parameters 
+
+```
+func main () {
+    sum(1,2,3,4,5,6)
+    // output 
+    // [1 2 3 4 5]
+    // the sum is 15 
+}
+
+func sum(values ...int) { // tells the compiler to wrap all the parameters in a slice name values 
+    fmt.Println(values)
+    resut := 0 
+    for _ , v  := range values {
+        result += v
+    }
+    fmt.Println("the sum is ",result)
+}
+
+```
+
+>when passing variable parameter we can only pass one and it has to be the last one 
+
+### return of function 
+
+```
+func foo (values ...int) int { // hear int at end is the return type 
+    // stuff 
+    sum := 0 
+    
+    return sum 
+}
+
+```
+
+>NB. a rare feature that go has that other languages do not is go can return a loal variable as a pointer 
+
+```
+
+func foo(values ...int) *int {
+    sum := 0
+    return &sum 
+}
+```
+
+>it is rare beacuse when we declare the `sum` variable we decalre it in the execution stack of this function which is a special section of the memory which is set aside for all the operation this function is going to be working with . when this function exits that execution stack is destroyed and memory is freed up 
+
+
+> but he pointer would be pointing to a blank location with garbage value but in go lang when it realizes we are returning a value that is in the local stack it is autometically going to promote the variable in the shared memory on the compiler which is also called `heap memory`
+
+
+#### named return value 
+
+```
+    func sum (values ...int) (sum int) {
+        for _ ,v := range values {
+            sum += v
+        } 
+        return // will have to write return without specifying value 
+    }
+```
+
+>NB. this is helpful when the function is very big/long , to know the return type we have to scroll down at the end of the function , by using named return we can avoid that 
+
+
+#### multiple return values 
+
+```
+    func main () {
+        d , err = division(5.0,0)
+        if(err != nil) {
+            fmt.Println(err)
+            return 
+        }
+        fmt.Println(d)
+    }
+    
+    function division(a,b float64) (float64 , err) {
+        if( b == 0) {
+            return 0.0 , fmt.Error('cant divide by Zero')
+        }
+        return a/b , nil 
+    }
+```
+
+>NB. this pattern is very common in go this left justifies  our code as much as possible as we dont have to write the arternative code isdise else block 
+
+#### Annoynimus function 
+
+```
+func main () {
+    func() { // this function can read outer scope variables 
+        fmt.Println("hello there !")
+    }() 
+}
+// output 
+// hello there !
+
+```
+
+>NB.if we want to read outer scope stuff we have to pass that as argument / parameter or it might cause error in async code 
+
+```
+    for  i := 0 ; i < 5 ; i+=1 {
+        func(arg){
+            fmt.Println(arg)
+        }(i)
+    }
+```
+
+
+### function as type 
+
+```
+    var f  func() = func () {
+        fmt.Println("hello GO")
+    }
+    f()
+```
+>NB.  as they are types they can be stored in variable 
+
+
+### methods 
+
+```
+func main () {
+    g := greeter {
+        greeting : 'hello',
+        name : 'go'
+    }
+    g.greet() // method invocation 
+    
+ 
+}
+
+type greeter struct {
+    greeting string 
+    name string 
+}
+
+func (g greeter) greet() {
+    fmt.Println(g.greeting,g.name)
+}
+// (g greeter ) is known as method reciver 
+```
+>NB. method reciver is what makes a function method in go , what this does is gives function a context were to execute , so we can do `g.greet()` 
+
+>methods are functions with syntactic suger that provides a contet the function should execute 
+
+```
+    func man struct {
+        name string 
+    }
+    
+    func (m man) getName()(name string) {
+        return m.name 
+    }
+    
+    func (m *man) setName(name string) {
+        m.name = name 
+        return m 
+    }
+
+```
+>`getName` uses a copy of `man` , but `setName` uses a reference to man which is more efficient 
+
+if we return pointer from a set method we can make a builder 
+
+```
+func (m *man) setName(name string) *man {
+    m.name = name 
+    return m 
+}
+m := man {
+    name : ''
+}
+m.setName("arif").setName("kasif")
+
+```
+
+# Interfaces 
+
+> ## " the way interfaces are implemented in GO makes it so scaleable compared to java and other languages "
+
+agenda 
+- basic 
+- composing interfaces 
+- type conversion 
+    - empty interface
+    - type switching 
+- implementing with values vs pointer
+- best practices 
+
+
+```
+type Writer interface {
+    write([]byte))(int , err)
+}
+
+type ConsoleWriter struct {} 
+
+func (cw ConsoleWriter) Write (data []byte) (int , err ) {
+    n , err = fmt.Println(string(data))
+    
+    return n , err 
+}
+
+func main () {
+    var w Writer = ConsoleWriter{} 
+    w.Write([]byte("hello go"))
+}
+```
+
+>inside structs we define data but inside interfaces we describe behaviours (method defination)
+
+> in got we do no explicitly implement interface we do it implicitly 
+
+> console writer hear can be replaced with any kind of struct that has method writer what is polymorphis behaviour 
+
+
+> so what we can do is for a concreate type we can create an interface 
+
+
+### naming convension of interface 
+
+if we have a single method interface we name the interface like method name + er
+
+write+ er = writer 
+
+>structs are the most common way to implement interfaces , but we dont have to use structs we can use any type 
+
+__ex__ 
+we dont have controll over int type as it is a primitive type we have controll over types that we define 
+
+```
+    type Incrementer interface {
+        Increment() int 
+    }
+    
+    type IntCounter int 
+    
+    func (inc *IntCounter) Increment() int {
+        *inc += 1 
+        return int(*inc)
+    }
+    
+    func main() {
+        myInt := IntCounter(0) 
+        var inc Incrementer = &myInt 
+        for i :=0 ; i< 10 ; i +=1 {
+            fmt.Println(inc.Increment())
+        }
+    }
+    // output 
+    // 1 
+    // 2
+    // 3 
+    // .. 
+    // .. 
+    // 9 
+```
