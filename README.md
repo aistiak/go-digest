@@ -1794,3 +1794,802 @@ we dont have controll over int type as it is a primitive type we have controll o
     // .. 
     // 9 
 ```
+
+### interface implementing interface 
+
+```
+
+type WriterCloser interface {
+    Writer 
+    Closer 
+}
+
+type Writer interface {
+    Write([]byte) (int,err)
+}
+type Closer interface {
+    Close() err
+}
+type BufferWriterCloser struct {
+    buffer *bytes.Buffer 
+}
+
+func (bwc *BufferWriterCloser) Write (data []byte) (int , err){
+    n , err := bwc.Buffer.Writer(data)
+    if err != nil {
+         return 0 , err    
+    }
+    
+    v := make([]byte,8)
+    
+    for bwc.buffer.len() > 8 {
+        _,err  := bwc.buffer.Read(v)
+        if (err != nil) {
+            return 0 , err 
+        }
+        _ , err2 = fmt.Println(string(v))
+        
+        if err2 != nil {
+            return 0 , err2
+        }
+    }
+}
+
+fucn main () {
+    
+    var wc WriterCloser = new BufferWriterCloser() 
+    wc.Write([]byte("hello youtube listeners, this is test"))
+    we.Close()
+}
+
+func NewBUfferWriterCloser() *BufferWriterCloser {
+    return &BufferWriterCloser {
+        buffer : bytes.NewBuffer([]byte{})
+    }
+}
+
+func (bwc *BufferWriterCloser) Close() error { // flushing the buffer 
+    for bwc.buffer.len() > 0 {
+        data := bwc.buffer.Next(8)
+        _,err = fmt.Println(string(data))
+        if err != nil {
+            return err 
+        }
+    }
+    return nil 
+}
+
+// output 
+// hello yo
+// utube li
+// sterners ,
+// this is 
+// a test 
+// -> charecters are getting printed with 8 charecters chunk 
+
+```
+
+if we comment out `wc.Close()` we would get output 
+
+```
+// output 
+// hello yo
+// utube li
+// sterners ,
+// this is 
+// -> there will be no `a test` printed out as this is not a 8 charecter chunk , the buffer is not flushed 
+
+```
+
+
+# Type conversion 
+
+```
+bwc := wc.(*BufferWriterCloser) 
+```
+
+converting writer closer to buffer writercloser but notice we are using pointer 
+
+```
+bwc := wc(io.Reader) // -> this will cause error as io.Reader need read method so it panics 
+```
+to stop this panic hear we can 
+
+```
+n , ok = := wc.(io.Reader)
+
+if ok {
+    
+}else {
+    // conversion failed 
+}
+
+```
+
+
+```
+r , ok = wc.(*BufferWriterCloser) // * <- is required as we implemented the interface with pointer 
+```
+
+// TODO this section needs more work 
+
+
+## empty interface 
+
+```
+var myObj interface {} = NewBufferWriterCloser() 
+
+if wc , ok := myObj.(WriterCloser) ; ok {
+    // stuff 
+}
+```
+
+>NB. nice thing about empty interface are everthing can be cast into an object that has no method written to it even primitivs
+
+
+>This is a very important note when working with interfac if any of the methods require a pointer or implementing own reciver we are going to have to implement that interface with a pointer if not through if all the methods require value type then we can go ahed and use value types but we could aslo use a pointer 
+
+implementing an interfce with value 
+
+```
+var wc WriterCloser = myWriterCloser{}
+```
+
+implementing with pointer 
+
+```
+var wc WriterCloser = &myWriterCloser
+```
+when we are implementing an interface with value type all of the methods need to have value recivers (methods that implement the interface) if we implement with pointers we just need the methods regardless of the the recivers 
+
+
+so the method set for a value type is all the method with value recivers but method set for a pointer type is all of the methods with value recivers as well as pointer recivers (only for interfaces )
+
+#### what is method set ?
+when we define types and we assign methods to them each one of those type has what is called a method set 
+
+now when we are working with methods directly the method set is all of the methods regardless of the recivers associated with that type 
+
+But with interfaces things work differently when we implement interface with concrete value the method set of the value , when we are taking in the context of interface is any method that has a value as a reciver and the method set if a pointer is the sum of all of the value reciver methods and all of the pointer reciver methods 
+
+# need examples 
+
+Encouraged and supported by the go community and good to apply if our application its practical 
+
+1) use many , small interfaces , the samller the interface the useful and powerful they can be (applicable for any language)
+
+2) if we dont need to xport and interface athen we wont (export concrete
+video ref (5.25.00)
+
+
+3) design functions and methods to recive interace whenever possible 
+
+
+# Goroutines 
+Agenda 
+- creating goroutines 
+- syncronization 
+    - waitgroup
+    - mutex
+- parallelism 
+- best pranctices 
+
+
+__ex__ 
+how to create goroutine ?
+
+```
+
+func main() {
+
+    go sayHello()
+
+}
+
+func sayHello() {
+
+    print("hello")
+
+}
+
+// output 
+// nothing would be output 
+
+```
+`go sayHello()`  spins off a green thread and run the sayhello in the green thread . 
+
+the sayHello is in another go routine and our application exits as soon as the main function is done 
+
+most of the programming languages (PL) use os threads what it means they have an individual call stack handed to that thread these tend to be very very large talking 1mb of RAM quite bit of time for app to set up creation and distruction of thread is very expensive 
+
+GO follows a different model which is similar to `Erlang` language which is green thread which creates an abstruction of a thread which we call go routine . GO scheduler maps these go routines on to the os thread and schedular will take then with cpu thread that available and assign every go routine certain amount of time on these threads 
+
+Go routines are very cheap to create and destroy so a go application can have many go routines at once 
+
+__ex__ 
+
+this is bad practice but just for example 
+
+```
+go sayHello() 
+
+time.Sleep( 100 * time.Miliseconds )
+
+// out 
+// hello 
+
+```
+
+__ex__ *(clouser)*
+
+go has understanding of clouser 
+
+
+```
+    go func() {
+    
+    }()
+    
+    time.Sleep()
+    
+    // out 
+    // hello 
+```
+
+```
+
+     msg := "hello"
+     
+     go func () {
+     
+         print(msg)
+     }()
+     
+     msg = "bye"
+     
+     time.Sleep()
+     
+     // output
+     // bye 
+     
+```
+
+as we see using clouser like this can have unexpected results so we can write is like 
+
+```
+
+    msg := "hello"
+    
+    go func(){
+        
+        fmt.Println(msg)
+        
+    }(msg) // passing by value
+    
+    msg = "bye"
+    
+    time.Sleep() 
+    
+    // output 
+    // hello 
+    
+```
+
+
+### waitgroup 
+
+__ex__ *(work application without sleep function)*
+
+```
+
+import ('sync')
+
+wc := sync.waitGroup{} // creating waitgroup 
+
+func main () {
+
+    msg := "hello"
+    
+    wg.Add(1) // adding a goroutine to waitgroup 
+    
+    go func(msg string) {
+    
+        fmt.Println(msg)
+        
+        wg.done()
+        
+    }(msg)
+    
+    msg = "goodbye"
+    
+    wg.Wait() 
+    
+    // output 
+    // hello
+}
+
+```
+
+### mutex 
+
+mutex is used to lock resources
+
+__ex__ 
+
+```
+
+import(
+    'fmt'
+    'sync'
+)
+
+wg := sync.WaitGreoup{} 
+
+m := sync.RWMutex{}
+
+counter := 0 
+
+func main () {
+
+    for  i := 0 ; i < 10 ; i+=1 {
+    
+        wg.Add(2)
+        m.RLock() // read lock 
+        go sayHello()
+        m.Lock() // write lock 
+        go increment()
+    }
+    wg.Wait() 
+}
+
+func sayHello () {
+
+    fmt.Println("hello")
+    m.RUnlock() // read unlock
+    wg.Done()
+}
+
+func increment() {
+
+    counter++
+    m.Unlock()
+    wg.Done()
+}
+// see video agnain to find out output 
+
+```
+
+# CHANNELS 
+
+its a very unique feature and makes go standout among other 
+
+most PL were design with a single porcessing were in mind when concurrency and perellelsim came in mind . when concurrency and perellelism came they were bolted on the side and had special packages when go was designed concurrency and parallelsim were considered 
+
+> channels can help pass data between go routines in a way which is safe and prevents race condition and memory sharing problem 
+
+
+
+
+Agenda 
+
+- channel basic 
+- restricting data flow (send / recive only channel )
+- buffered channel 
+- close channels 
+- for range loop with channels 
+- select statement ( specially designed )
+
+
+__ex__ 
+
+```
+ wg := sync.WaitGroup{} 
+ 
+ func main() {
+ 
+     ch := make(chan int) 
+     // int is the data type thats going to 
+     // flow through the channel are strongly typed 
+     wg.Add(2)
+     
+     go func() {
+         i := <-ch
+         fmt.Prinln(i)
+         wg.Done()
+     }()
+     
+     go func() {
+         ch <- 42
+         wg.Done()
+     }()
+     
+ }
+
+
+// out 
+// 42 
+
+```
+
+__ex__*( async senders and recivers )*
+
+if the member of senders and recivers do not natch it is going to cause deadlock (PANIC)
+
+only one message at the buffer at once to do otherwise we need buffered channels 
+
+__ex__*( bideirectional routines )*
+
+```
+
+    ch := make(chan int) 
+    
+    wg.Add(2)
+    
+    go func() {
+       i := <- ch 
+       fmt.Println(i)
+       ch <- 27 
+       wg.Done()
+    }()
+    
+    go func() {
+        ch <- 42 
+        // passing data to the channel 
+        fmt.Println(<- ch)
+    }()
+    
+    wg.Wait()
+    
+    // output 
+    // 42 
+    // 27 
+```
+
+
+__ex__*( directional channel )*
+
+```
+
+    ch := make(chan int)
+    
+    wg.Add(2)
+    
+    go func(ch <- chan int) {     // recive only channel 
+        
+        i := <- ch
+        
+        fmt.Println(i)
+        
+    }(ch)
+    
+    go func(ch chan <- int) {    // send only 
+        
+        ch <- 42 
+        
+        wg.Done()
+        
+    }(ch)
+    
+```
+
+recive data from one side and send from another 
+
+Notice we are passing bidirectional channel and aorking with a single directional channel . hear the go routine understands the needs and does the casting itself so this is a kind of polymorphic behaviour 
+
+__ex__ *( buffer channel)*
+
+```
+    func main () {
+    
+        ch := make(chan int)
+        
+        wg.Add(2)
+        
+        func ( ch <- chan int) {
+            i := <- ch
+            fmt.Println(i)
+            wg.Done()
+        }(ch)
+        
+        func (ch chan <- int) {
+            ch <- 42
+            ch <- 27 
+            wg.Done()
+        }(ch)
+        
+        wg.Wait()
+        
+    }
+
+```
+
+**Output**
+
+fatal error all goroutines are asleep  - deadlock ! 
+
+as the channels are asymetric sending by 2 and reciving from 1 at a time 
+(Buffer can solve the problem)
+
+
+adding buffer to a channel 
+```
+    ch := make(chan int,50) // 50 is buffer 
+```
+
+this channel has a internal data store which can store 50 integers 
+
+buffer are also neededwhen the senders or recivers need a littel time to process and dont want to block the other side 
+
+```
+    ch := make(chan int , 50)
+    
+    wg.Add(2)
+    
+    go func(ch <- chan int) {
+        for i:= range(ch) {
+            fmt.Println(i)
+        }
+        wg.Done()
+    }(ch)
+    
+    go func(ch chan <- int ) {
+        ch <- 42 
+        ch <- 27 
+        wg.Done()
+        close(ch) 
+        // if we dont close the channel it will 
+        // cause deadlock as it does not know 
+        // when to stop reading message 
+    }(ch)
+    
+    wg.Wait()
+
+```
+
+when we are closing the channel we have to remember that we cant send any more data one the channel is closed . so we could defer a funcion to close the channel as if we always keep it open we might have memory leak 
+
+
+>NB. cant send data in a closed channel and we cant also detect if a channel is closed from sending routine 
+
+to know from reciving routine 
+
+
+```
+    if i,ok := <- ch ; ok { // ok will be true if channel is open 
+    
+    }
+```
+
+
+__ex__*( logger implementation with channel)*
+
+```
+    const (
+        logInfo = "INFO"
+        logWarning = "WARNING"
+        logError = "ERROR"
+    )
+    
+    type logEntry struct {
+    
+        time time.Time 
+        severty string 
+        messge string 
+    }
+    
+    logCh := make(chan logEntry,50)
+
+    func main () {
+        
+        go logger()
+        
+        logCh <- logEntry{time.Now(),logInfo , "App is starting"}
+        
+        logCh <- logEntry{time.Now(),logInfo , "App is sutting down"}
+        
+        time.Sleep( 100 * time.Milisecond)
+        
+    }
+    
+    func logger () {
+    
+        for entry := range logCh {
+        
+            fmt.Println(" %v - [%v] %v \n")
+            
+            entry.time.Format(" %v %v ",entry.severty,entry.message)
+        }
+    }
+    
+    // output 
+    // 2021-12-15 23:00:00 [INFO] App is starting 
+```
+
+but the logger needs to shutdown 
+
+now after the main function is done out logger function wripped down forcefully 
+
+
+to do it more greacefully we could do 
+
+one , with difer 
+
+```
+    go logger() 
+    
+    defer func() { // executes before main exits 
+        close(logch)
+    }()
+
+```
+
+two , with select statement , zero memory allocation is required in this process 
+
+```
+
+    var doneCh = make(chan struct{})
+    
+    // this is a singal only channel we cant 
+    // send or recive any data with this channel
+    // but we can know a message was sent or recive 
+
+    func logger() {
+    
+        for { // inf loop 
+            
+            select {
+            
+                case entry := <- logch : 
+                    fmt.Println()
+                case <- doneCh : 
+                    break  // exits from the loop and exits the channel 
+                    
+                // if we have a default case it will 
+                // become not blocking and exits 
+            }
+        }
+    }
+```
+
+
+now to singal done channel form the main 
+
+
+```
+    func main() {
+    
+        go logger() 
+        
+        logCh <- logEntry{sth}
+        
+        logCh <- logEntry{sth}
+        
+        time.Sleep()
+        
+        doneCh <- struct{}{} 
+        
+        // struct{} is type , statuct{}{} defining a struct 
+        // with no fields and then initialize struct with curly braces 
+    }
+
+    // output 
+    // same as before 
+```
+
+
+## Parsing JSON
+
+golang package for json in `encoding/json`
+
+for encoding `json.Marshal` for decoding `json.Unmarshal`
+
+
+date type 
+
+|__GO__| __JSON__|
+|--|--|
+|bool|boolean|
+|float64|Numbers|
+|string|string|
+|nil|null|
+|array|array|
+|map/struct|Object|
+
+
+__ex__ 
+
+```
+    
+    import (
+        "fmt"
+        "encoding/json"
+    )
+
+    type Human struct {
+    
+        Name  string 
+        
+        Age Number 
+        
+        Address string 
+    }
+```
+
+
+```
+
+func main() {
+
+    human := Human{"Antik",23,"yemen"}
+    
+    humanEnc , err := json.Marshal(human) 
+    
+    if err != nil {
+    
+        fmr.Println(err)
+    
+    }
+    
+    fmr.Println(string(humanEnc))
+    
+    humans := []Human{
+    
+        Human{"Antik",23,"yemen"},
+        Human{"Istiak",26,"dhaka"},
+        
+    }
+    
+    humansEnc , err := json.Marshal(humans)
+    
+    if err != nil {
+    
+        fmr.Println(err)
+    }
+    
+    fmr.Pritnln(string(humans))
+}
+
+```
+
+
+__ex__ 
+
+```
+
+var human1 Human 
+
+Data := []byte(`{
+
+    "Name" : "Arif",
+    "Age" : "26",
+    "Address" : "Mirpur"
+}`)
+
+err := json.Unmarshal(Data,&human1)
+
+if err != nil {
+
+}
+
+fmt.Println("this struct is",human1)
+
+var human2 []Human 
+
+Data2 := []byte(`[
+    {
+        "Name" : "Arif",
+        "Age" : "26",
+        "Address" : "Mirpur"
+    },
+    {
+        "Name" : "Galib",
+        "Age" : "30",
+        "Address" : "Faridpur"
+    }
+]`)
+
+error := json.Unmarshal(Data2,&human2)
+
+fmt.Println("the array is ",&human2)
+
+```
